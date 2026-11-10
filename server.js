@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
-import { Mppx, tempo } from 'mppx/express'
+import { Mppx, tempo, Store } from 'mppx/express'
 import { Mppx as MppxClient, tempo as tempoClient } from 'mppx/client'
 import { privateKeyToAccount } from 'viem/accounts'
 
@@ -13,6 +13,7 @@ const mppx = Mppx.create({
     currency: '0x20c0000000000000000000000000000000000000', // pathUSD (testnet)
     recipient: process.env.RECIPIENT,
     testnet: true,
+    store: Store.memory()
   })],
 })
 
