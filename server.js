@@ -201,7 +201,7 @@ const validateRepo = async (req, res, next) => {
 app.use(express.static('public'))
 
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true })
+  res.json({ ok: true })
 })
 
 // ---------- FREE SAMPLE ----------
@@ -211,7 +211,7 @@ app.get('/api/sample', async (req, res) => {
   try {
     const repo = await gh('/repos/expressjs/express')
 
-    res.status(200).json(
+    res.json(
       await analyze('expressjs/express', repo)
     )
 
@@ -230,14 +230,9 @@ app.get(
   async (req, res) => {
 
     try {
-
-      const report = await analyze(req.repoPath, req.repoData)
-
-      res.status(200).json({
-        status: 200,
-        message: 'Payment successful. Repository analysis completed.',
-        report
-      })
+      res.json(
+        await analyze(req.repoPath, req.repoData)
+      )
 
     } catch (e) {
 
@@ -334,7 +329,7 @@ app.post('/demo/agent', async (req, res) => {
 
 app.get('/openapi.json', (req, res) => {
 
-  res.status(200).json({
+  res.json({
 
     openapi: '3.1.0',
 
@@ -440,28 +435,7 @@ app.get('/openapi.json', (req, res) => {
           responses: {
 
             200: {
-              description: 'Payment successful. Repository health report returned.',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      status: {
-                        type: 'integer',
-                        example: 200
-                      },
-                      message: {
-                        type: 'string',
-                        example: 'Payment successful. Repository analysis completed.'
-                      },
-                      report: {
-                        type: 'object',
-                        description: 'Repository health analysis'
-                      }
-                    }
-                  }
-                }
-              }
+              description: 'Repository health report (JSON)'
             },
 
             400: {
