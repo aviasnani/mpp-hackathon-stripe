@@ -172,7 +172,7 @@ async function analyze(p, repo) {
 
 const validateRepo = async (req, res, next) => {
 
-  const repo = String(req.query.repo || '')
+  const repo = String(req.query.repo || 'expressjs/express')
 
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
     return res.status(400).json({
