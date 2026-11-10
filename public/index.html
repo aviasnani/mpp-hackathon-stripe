@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Repo Analyser: repo health reports your agent can buy</title>
+    <meta
+      name="description"
+      content="Pay-per-call GitHub repo health reports for AI agents. $0.02 per report over MPP (HTTP 402). No API key, no account."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #eceff3;
+        --panel: #ffffff;
+        --ink: #0f1b2d;
+        --muted: #566275;
+        --line: #c9d1db;
+        --signal: #2540e8;
+        --signal-ink: #ffffff;
+        --ok: #0f7a55;
+        --bad: #a33a2f;
+        --wire: #0f1b2d;
+        --wire-ink: #dce4f0;
+        --sans:
+          "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI",
+          sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 400 17px/1.55 var(--sans);
+      }
+      a {
+        color: var(--signal);
+      }
+      :focus-visible {
+        outline: 3px solid var(--signal);
+        outline-offset: 2px;
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 22px 0;
+      }
+      .brand {
+        font-weight: 800;
+        font-size: 19px;
+        letter-spacing: -0.01em;
+      }
+      nav a {
+        margin-left: 22px;
+        color: var(--ink);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr 1.05fr;
+        gap: 48px;
+        padding: 40px 0 64px;
+        align-items: start;
+      }
+      h1 {
+        font-weight: 800;
+        font-size: clamp(38px, 5.4vw, 64px);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        margin: 0 0 20px;
+      }
+      .lede {
+        font-size: 19px;
+        color: var(--muted);
+        max-width: 30em;
+        margin: 0 0 28px;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 440px;
+      }
+      label {
+        font-weight: 600;
+        font-size: 15px;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 13px 14px;
+        border: 1.5px solid var(--ink);
+        border-radius: 6px;
+        background: var(--panel);
+        font: 500 16px var(--mono);
+        color: var(--ink);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        font: 600 16px var(--sans);
+        padding: 13px 18px;
+        border-radius: 6px;
+        border: 1.5px solid var(--ink);
+        cursor: pointer;
+        background: transparent;
+        color: var(--ink);
+      }
+      button.primary {
+        background: var(--signal);
+        border-color: var(--signal);
+        color: var(--signal-ink);
+      }
+      button:hover {
+        filter: brightness(0.94);
+      }
+      button[disabled] {
+        opacity: 0.55;
+        cursor: progress;
+      }
+      .hint {
+        font-size: 14px;
+        color: var(--muted);
+        margin: 2px 0 0;
+      }
+
+      .wire {
+        background: var(--wire);
+        color: var(--wire-ink);
+        border-radius: 10px;
+        overflow: hidden;
+        font-family: var(--mono);
+        font-size: 13.5px;
+        line-height: 1.6;
+      }
+      .wire h2 {
+        margin: 0;
+        font: 600 14px var(--sans);
+        padding: 12px 18px;
+        border-bottom: 1px solid #26344b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .status {
+        font: 500 13px var(--mono);
+        padding: 2px 10px;
+        border-radius: 99px;
+        background: #26344b;
+      }
+      .status.s402 {
+        background: var(--signal);
+        color: #fff;
+      }
+      .status.s200 {
+        background: #12805c;
+        color: #fff;
+      }
+      .status.serr {
+        background: #8e3b32;
+        color: #fff;
+      }
+      .wire pre {
+        margin: 0;
+        padding: 14px 18px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 3.4em;
+      }
+      .wire .sep {
+        border-top: 1px solid #26344b;
+      }
+      .wire .cap {
+        padding: 0 18px 4px;
+        color: #93a3bc;
+        font: 400 12.5px var(--sans);
+      }
+      .note {
+        padding: 12px 18px 16px;
+        font: 400 14px/1.5 var(--sans);
+        color: #b9c6da;
+        border-top: 1px solid #26344b;
+      }
+
+      section {
+        padding: 56px 0;
+        border-top: 1.5px solid var(--ink);
+      }
+      h2.t {
+        font-weight: 800;
+        font-size: 30px;
+        letter-spacing: -0.02em;
+        margin: 0 0 6px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
+
+      .report {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 40px;
+        background: var(--panel);
+        border: 1.5px solid var(--ink);
+        border-radius: 10px;
+        padding: 28px;
+      }
+      .score {
+        font-weight: 800;
+        font-size: 88px;
+        line-height: 0.9;
+        letter-spacing: -0.04em;
+      }
+      .score small {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0;
+      }
+      .band {
+        margin-top: 10px;
+        font-weight: 600;
+      }
+      .repo {
+        font: 500 15px var(--mono);
+        margin-top: 18px;
+        word-break: break-all;
+      }
+      .desc {
+        color: var(--muted);
+        font-size: 15px;
+        margin: 6px 0 0;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 16px;
+        margin-bottom: 26px;
+      }
+      .kv div {
+        border-left: 3px solid var(--signal);
+        padding-left: 12px;
+      }
+      .kv b {
+        display: block;
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+      .kv span {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      h3 {
+        font-size: 16px;
+        margin: 0 0 10px;
+      }
+      .bar {
+        display: flex;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--line);
+        margin-bottom: 10px;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 26px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 6px;
+      }
+      .checks {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 8px 18px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .checks li {
+        font-size: 15px;
+      }
+      .checks .y {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .checks .n {
+        color: var(--bad);
+        font-weight: 600;
+      }
+
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+      pre.code {
+        background: var(--panel);
+        border: 1.5px solid var(--ink);
+        border-radius: 8px;
+        padding: 16px;
+        overflow-x: auto;
+        font: 500 13.5px/1.6 var(--mono);
+        margin: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+      }
+      td code {
+        font: 500 13.5px var(--mono);
+      }
+      footer {
+        padding: 28px 0 48px;
+        color: var(--muted);
+        font-size: 14px;
+        border-top: 1.5px solid var(--ink);
+      }
+
+      @media (max-width: 860px) {
+        .hero,
+        .cols,
+        .report {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          gap: 32px;
+        }
+        nav a:first-child {
+          margin-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">Repo Analyser</div>
+        <nav>
+          <a href="#report">Sample report</a><a href="#agents">For agents</a
+          ><a href="/openapi.json">OpenAPI</a>
+        </nav>
+      </header>
+
+      <main>
+        <div class="hero">
+          <div>
+            <h1>Repo health reports your agent can buy.</h1>
+            <p class="lede">
+              Send a GitHub repo, get a 0 to 100 health score, bus factor,
+              activity and a missing-files checklist. Each report costs $0.02
+              and is paid inside the request over MPP. No API key, no account.
+            </p>
+            <form id="f">
+              <label for="repo">GitHub repo</label>
+              <input
+                id="repo"
+                type="text"
+                value="expressjs/express"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="owner/name"
+              />
+              <div class="row">
+                <button class="primary" type="submit" id="go">
+                  Request a report
+                </button>
+                <button type="button" id="agentBtn">Pay as demo agent</button>
+                <button type="button" id="sampleBtn">Load free sample</button>
+              </div>
+              <p class="hint">
+                "Request a report" shows the raw 402 challenge. "Pay as demo
+                agent" makes a real testnet payment from a server-side agent
+                wallet and returns the report. The free sample always uses
+                expressjs/express.
+              </p>
+            </form>
+          </div>
+
+          <div class="wire" aria-live="polite">
+            <h2>Live exchange <span class="status" id="status">idle</span></h2>
+            <div class="cap" style="padding-top: 12px">Request</div>
+            <pre id="req">GET /api/analyze?repo=expressjs/express</pre>
+            <div class="sep"></div>
+            <div class="cap" style="padding-top: 12px">Response</div>
+            <pre id="res">
+Press "Request a report" to see what the server sends back.</pre
+            >
+            <div class="note" id="note">
+              Unpaid requests get HTTP 402 with a payment challenge. A paying
+              client settles it, retries with proof, and receives the JSON
+              report.
+            </div>
+          </div>
+        </div>
+
+        <section id="report">
+          <h2 class="t">What a paid response contains</h2>
+          <p class="sub">
+            Free sample for
+            <span id="sampleName" style="font-family: var(--mono)"
+              >expressjs/express</span
+            >. Paid calls return this same JSON for any public repo.
+          </p>
+          <div class="report" id="reportBox"><p>Loading sample…</p></div>
+        </section>
+
+        <section id="agents">
+          <h2 class="t">For agents</h2>
+          <p class="sub">
+            Discoverable at <a href="/openapi.json">/openapi.json</a>. Settles
+            on Tempo testnet in pathUSD.
+          </p>
+          <div class="cols">
+            <div>
+              <h3>See the challenge</h3>
+              <pre
+                class="code"
+              >curl -i "<span class="origin"></span>/api/analyze?repo=expressjs/express"
+
+# HTTP/1.1 402 Payment Required
+# WWW-Authenticate: Payment ...</pre>
+              <p class="hint" style="margin-top: 12px">
+                Use any MPP client (see <a href="https://mpp.dev">mpp.dev</a>)
+                to pay the challenge and retry the same request.
+              </p>
+            </div>
+            <div>
+              <h3>Endpoints</h3>
+              <table>
+                <tr>
+                  <th>Path</th>
+                  <th>Cost</th>
+                  <th>Notes</th>
+                </tr>
+                <tr>
+                  <td><code>/api/analyze?repo=owner/name</code></td>
+                  <td>$0.02</td>
+                  <td>
+                    Bad input and unknown repos return 400/404 before any
+                    charge.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>/api/sample</code></td>
+                  <td>Free</td>
+                  <td>Fixed example repo.</td>
+                </tr>
+                <tr>
+                  <td><code>/openapi.json</code></td>
+                  <td>Free</td>
+                  <td>Service description.</td>
+                </tr>
+                <tr>
+                  <td><code>/health</code></td>
+                  <td>Free</td>
+                  <td>Liveness check.</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>Built for the MPP hackathon. Testnet funds only.</footer>
+    </div>
+
+    <script>
+      const $ = (s) => document.querySelector(s);
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      document
+        .querySelectorAll(".origin")
+        .forEach((el) => (el.textContent = location.origin));
+
+      const LABELS = {
+        license: "License",
+        readme: "README",
+        ci: "CI workflows",
+        tests: "Tests folder",
+        security_policy: "Security policy",
+        contributing: "Contributing guide",
+        dockerfile: "Dockerfile",
+        lockfile: "Lockfile",
+      };
+      const PALETTE = [
+        "#2540E8",
+        "#0F7A55",
+        "#B7791F",
+        "#7A3FB5",
+        "#C2410C",
+        "#566275",
+      ];
+
+      function setStatus(text, cls) {
+        const s = $("#status");
+        s.textContent = text;
+        s.className = "status " + (cls || "");
+      }
+
+      function renderReport(d) {
+        const langs = Object.entries(d.languages || {})
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        const band =
+          d.health_score >= 80
+            ? "Healthy"
+            : d.health_score >= 55
+              ? "Needs attention"
+              : "At risk";
+        $("#sampleName").textContent = d.repo;
+        $("#reportBox").innerHTML = `
+    <div>
+      <div class="score">${esc(d.health_score)}<small> / 100</small></div>
+      <div class="band">${band}</div>
+      <div class="repo">${esc(d.repo)}</div>
+      <p class="desc">${esc(d.description || "No description")}</p>
+    </div>
+    <div>
+      <div class="kv">
+        <div><b>${esc(d.stars?.toLocaleString())}</b><span>stars</span></div>
+        <div><b>${esc(d.open_issues?.toLocaleString())}</b><span>open issues</span></div>
+        <div><b>${esc(d.bus_factor)}</b><span>bus factor</span></div>
+        <div><b>${esc(d.activity.days_since_last_push)}d</b><span>since last push</span></div>
+        <div><b>${esc(d.activity.commits_per_week)}</b><span>commits per week</span></div>
+        <div><b>${esc(d.activity.latest_release || "none")}</b><span>latest release</span></div>
+      </div>
+      <h3>Languages</h3>
+      <div class="bar" role="img" aria-label="Language share">${langs.map(([, v], i) => `<span style="width:${v}%;background:${PALETTE[i]}"></span>`).join("")}</div>
+      <div class="legend">${langs.map(([k, v], i) => `<span><i style="background:${PALETTE[i]}"></i>${esc(k)} ${v}%</span>`).join("")}</div>
+      <h3>Hygiene checks</h3>
+      <ul class="checks">${Object.entries(d.checks)
+        .map(
+          ([k, v]) =>
+            `<li><span class="${v ? "y" : "n"}">${v ? "Present" : "Missing"}</span> ${esc(LABELS[k] || k)}</li>`,
+        )
+        .join("")}</ul>
+    </div>`;
+      }
+
+      async function loadSample() {
+        try {
+          const r = await fetch("/api/sample");
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error || r.status);
+          renderReport(d);
+        } catch (e) {
+          $("#reportBox").innerHTML =
+            `<p>Couldn't load the sample (${esc(e.message)}). GitHub may be rate-limiting the server; set GITHUB_TOKEN and reload.</p>`;
+        }
+      }
+
+      $("#sampleBtn").addEventListener("click", () => {
+        loadSample();
+        $("#report").scrollIntoView({ behavior: "smooth" });
+      });
+
+      $("#f").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const repo = $("#repo").value.trim();
+        const url = "/api/analyze?repo=" + encodeURIComponent(repo);
+        const btn = $("#go");
+        btn.disabled = true;
+        setStatus("waiting…");
+        $("#req").textContent = "GET " + url;
+        $("#res").textContent = "…";
+        try {
+          const r = await fetch(url);
+          const challenge = r.headers.get("www-authenticate");
+          const text = await r.text();
+          let body = text;
+          try {
+            body = JSON.stringify(JSON.parse(text), null, 2);
+          } catch {}
+          const lines = [`HTTP/1.1 ${r.status} ${r.statusText}`];
+          if (challenge)
+            lines.push(
+              "www-authenticate: " +
+                (challenge.length > 260
+                  ? challenge.slice(0, 260) + "…"
+                  : challenge),
+            );
+          if (body && body.trim())
+            lines.push("", body.length > 600 ? body.slice(0, 600) + "…" : body);
+          $("#res").textContent = lines.join("\n");
+          setStatus(
+            String(r.status),
+            r.status === 402 ? "s402" : r.ok ? "s200" : "serr",
+          );
+          $("#note").textContent =
+            r.status === 402
+              ? "This is the point where an agent pays and retries with proof. Nothing was charged here."
+              : r.status === 400 || r.status === 404
+                ? "Rejected before the paywall, so no charge. Use owner/name for a public repo."
+                : "Unexpected response. Check the server logs.";
+        } catch (err) {
+          setStatus("error", "serr");
+          $("#res").textContent = "Request failed: " + err.message;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      $("#agentBtn").addEventListener("click", async () => {
+        const repo = $("#repo").value.trim();
+        const btn = $("#agentBtn");
+        btn.disabled = true;
+        setStatus("paying…");
+        $("#req").textContent =
+          "POST /demo/agent?repo=" +
+          repo +
+          "\n  1. agent calls GET /api/analyze, receives 402\n  2. agent signs a $0.02 payment on Tempo testnet\n  3. agent retries with the payment credential";
+        $("#res").textContent = "…";
+        try {
+          const r = await fetch(
+            "/demo/agent?repo=" + encodeURIComponent(repo),
+            { method: "POST" },
+          );
+          const d = await r.json();
+          if (!r.ok || !d.report)
+            throw new Error(d.error || "status " + (d.status || r.status));
+          const hdr = Object.entries(d.paymentHeaders || {}).map(
+            ([k, v]) => k + ": " + (v.length > 200 ? v.slice(0, 200) + "…" : v),
+          );
+          $("#res").textContent = [
+            "HTTP/1.1 " + d.status + " OK (after payment)",
+            ...hdr,
+            "",
+            "health_score: " + d.report.health_score,
+            "repo: " + d.report.repo,
+          ].join("\n");
+          setStatus(String(d.status), "s200");
+          $("#note").textContent =
+            "Paid for real on testnet. The full report is rendered below.";
+          renderReport(d.report);
+          $("#report").scrollIntoView({ behavior: "smooth" });
+        } catch (err) {
+          setStatus("error", "serr");
+          $("#res").textContent = err.message;
+          $("#note").textContent =
+            "Payment did not complete. Check the demo wallet is funded and DEMO_PAYER_KEY is set.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      loadSample();
+    </script>
+  </body>
+</html>
