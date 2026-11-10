@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
-import { Mppx, tempo, Store } from 'mppx/express'
+import { Mppx, tempo } from 'mppx/express'
+import { Store } from 'mppx/server'
 import { Mppx as MppxClient, tempo as tempoClient } from 'mppx/client'
 import { privateKeyToAccount } from 'viem/accounts'
 
